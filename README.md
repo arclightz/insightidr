@@ -1,0 +1,2 @@
+# insightidr
+InsightIDR scripts
