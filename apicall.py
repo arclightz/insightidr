@@ -1,32 +1,54 @@
 #!/usr/bin/env python3
 
-import urllib.request
+import requests
 import ssl
+import csv
+import json
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 ioc_url = "https://urlhaus.abuse.ch/downloads/csv_recent/"
 threat_key = ""
-headers = ""
+api_key = ""
+idr_url = "https://eu.api.insight.rapid7.com/idr/v1/customthreats/key/" + threat_key + "/indicators/replace?format=json"
 
+headers = {
+    'X-Api-Key': api_key,
+    'Content-Type': 'application/json',
+}
 
-print('Starting data retrieval!\n')
+ioc_list = []
+ioc_urls = {
+    'domain_names':[''], 
+    'hashes':[''], 
+    'ips':[''],
+    'urls':['']
+    }
 
 try:
-    r = urllib.request.urlopen(ioc_url)
-except urllib.request.HTTPError as e:
+    r = requests.get(ioc_url)
+except r.status_code as e:
     if e.code == 404:
         print('404')
     else:
         print('jotain')
-except urllib.request.HTTPError as e:
+except r.status_code as e:
     print('Cant connect')
 else:
     # 200
     print('Data retrieval complete!\n')
-    body = r.read()
+    body = r.text
+   
+lines = body.splitlines()
+reader = csv.reader(lines, delimiter=',')
 
-print('Done!')
+for row in reader:
+    ioc_list.append(row)
 
-from IPython import embed; embed()
+# Remove the URLhause header information
+del ioc_list[0:9]
 
+for value in ioc_list:
+    ioc_urls['urls'].append(value[2])
+
+r = requests.post(idr_url, headers=headers, data=json.dumps(ioc_urls))
